@@ -3,6 +3,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager')
 var secrets = new Map()
 async function accessSecretVersion (name) {
   if (secrets.hasOwnProperty(name)){
+    console.log('retrieved secret from memory');
     return secrets[name]
   }
 
@@ -15,6 +16,7 @@ async function accessSecretVersion (name) {
   // Extract the payload as a string.
   const payload = version.payload.data.toString('utf8')
   secrets[name] = payload
+  console.log('retrieved secret from cloud');
 
   return payload
 }

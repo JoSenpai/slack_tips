@@ -8,10 +8,10 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-async function store(key, tip) {
+async function store(document, key, tip) {
   // add a new tip in firestore
   try {
-    const tipUpdated = await db.collection('devTips').doc("pmitc").update({
+    const tipUpdated = await db.collection('devTips').doc(document).update({
       [key]: tip,
     });
     console.log(`Tip ${key} created.`);
@@ -44,4 +44,16 @@ async function getAll() {
   return tips
 }
 
-module.exports = { store, getAll, deleteTip };
+async function getLastTip() {
+  var lastTip
+  try {
+    data = await (await db.collection('devTips').doc("pmitc-last-tip").get()).data();
+    return data['lastTip']
+  } catch (error) {
+    console.log(error);
+  }
+
+  return lastTip
+}
+
+module.exports = { store, getAll, deleteTip, getLastTip };

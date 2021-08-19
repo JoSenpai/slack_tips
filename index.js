@@ -3,40 +3,11 @@ const express = require('express');
 const app = express();
 const { WebClient } = require('@slack/web-api');
 const bodyParser = require('body-parser');
-const schedule = require('node-schedule')
 const viewFile = require('./view');
 const signature = require('./verifySignature');
 const firebase = require('./firebase')
 const utils = require('./utils')
 const vault = require('./vault')
-
-// Create a new instance of the WebClient class with the token read from your environment variable
-
-// const { createEventAdapter } = require('@slack/events-api');
-// const slackEvents = createEventAdapter(process.env.SLACK_SIGNING_SECRET);
-// const apiUrl = 'https://1a102472f1b9.ngrok.io'
-
-
-schedule.scheduleJob('0 10 * * *', async function(){
-  try {
-    console.log('before web client');
-    let web = new WebClient(await vault.accessSecretVersion('dev-best-practices-bot-token'));
-
-    console.log('after web client');
-    let tips = await firebase.getAll()
-    let title = utils.getObjectRandomKey(tips)
-    let tip = tips[title]
-    
-    await web.chat.postMessage({
-      channel: '#testchannel',
-      text: utils.formatMessageTip(title,tip),
-    });
-
-    console.log('Message posted!');
-  } catch (error) {
-    console.log(error);
-  }
-});
 
 const rawBodyBuffer = (req, res, buf, encoding) => {
   if (buf && buf.length) {
@@ -49,7 +20,36 @@ app.use(bodyParser.json({ verify: rawBodyBuffer }));
 
 
 app.get('/', async(req, res) => {
-  res.send('There is no web UI for this code sample. To view the source code, click "View Source"');
+  res.send('There is no web UI for this cloud run app"');
+});
+
+app.post('/slack/sendTip', async(req, res) => {
+  res.send('');
+
+  try {
+    let web = new WebClient(await vault.accessSecretVersion('dev-best-practices-bot-token'));
+    let tips = await firebase.getAll()
+    let title, tip
+
+    const lastTipTitle = await firebase.getLastTip()
+    console.log("lastTipTitle", lastTipTitle);
+    // do {
+      title = utils.getObjectRandomKey(tips, lastTipTitle)
+      tip = tips[title]
+      // console.log('getting random object');
+    // } while (lastTipTitle == title);
+
+    await web.chat.postMessage({
+      channel: '#pmitc-stream',
+      text: utils.formatMessageTip(title,tip),
+    });
+
+    firebase.store("pmitc-last-tip", "lastTip", title)
+
+    console.log('Message posted!');
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 /*
@@ -88,9 +88,11 @@ app.post('/slack/actions', async(req, res) => {
   const { token, trigger_id, user, actions, type } = JSON.parse(req.body.payload);
   if(actions && actions[0].action_id.match(/add_/)) {
     res.send(''); // Make sure to respond to the server to avoid an error
+    console.log('add tip clicked');
     viewFile.addTip(trigger_id);
   } else if(actions && actions[0].action_id.match(/delete_/)) {
     res.send(''); // Make sure to respond to the server to avoid an error
+    console.log('delete tip clicked');
     viewFile.deleteTip(trigger_id);
   } else if(type === 'view_submission') {
     res.send(''); // Make sure to respond to the server to avoid an error
@@ -111,7 +113,7 @@ app.post('/slack/actions', async(req, res) => {
         tip: view.state.values.addTip.content.value,
       }
   
-      firebase.store(data.title, data.tip).then(() => {
+      firebase.store("pmitc", data.title, data.tip).then(() => {
         console.log('Stored data in Firebase');
         viewFile.displayHome(user.id);
       });

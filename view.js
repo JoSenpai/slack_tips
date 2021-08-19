@@ -72,7 +72,7 @@ const updateView = async(user) => {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: utils.formatMessageTip(key, allTips[key]),
+          text: utils.formatMessageTip(key, allTips[key]) + "\n\n_______________________________________________________________",
         },
       }
     )
@@ -139,16 +139,17 @@ const addTip = async(trigger_id) => {
     trigger_id: trigger_id,
     view: JSON.stringify(modal)
   };
-  
-  const result = await axios.post('https://slack.com/api/views.open', 
-  JSON.stringify(args),
-  {
+  headers =   {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: `Bearer ${await vault.accessSecretVersion('dev-best-practices-bot-token')}`
     }
-  });
+  }
+  const result = await axios.post('https://slack.com/api/views.open', 
+  JSON.stringify(args),
+  headers);
+  console.log('sent add tip response');
 };
 
 
@@ -198,18 +199,20 @@ const deleteTip = async(trigger_id) => {
     trigger_id: trigger_id,
     view: JSON.stringify(modal)
   };
-  
 
   try {
-    const result = await axios.post('https://slack.com/api/views.open', 
-    JSON.stringify(args),
-    {
+
+    headers = {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: `Bearer ${await vault.accessSecretVersion('dev-best-practices-bot-token')}`
       }
-    });
+    }
+    const result = await axios.post('https://slack.com/api/views.open', 
+    JSON.stringify(args),
+    headers);
+    console.log('sent delete tip response');
   } catch (error) {
     console.log(error);
   }
